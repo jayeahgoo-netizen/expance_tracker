@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="가계부">
+<title>가계부</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#f2f2f7;--surface:#fff;--surface2:#f2f2f7;
+  --text:#000;--text2:#6e6e73;--text3:#aeaeb2;
+  --border:#e5e5ea;--accent:#0064ff;--accent-bg:#e8f0ff;
+  --red:#ff3b30;--green:#34c759;--orange:#ff9500;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+#app{display:flex;flex-direction:column;height:100%;max-width:430px;margin:0 auto;position:relative}
+#header{background:var(--bg);padding:calc(var(--safe-top) + 14px) 20px 0}
+.hdr{display:flex;align-items:center;justify-content:space-between;height:44px}
+.hdr-title{font-size:17px;font-weight:700;letter-spacing:-0.3px}
+.hdr-left{display:flex;align-items:center;gap:6px}
+.sync{width:6px;height:6px;border-radius:50%;background:var(--text3)}
+.sync.ok{background:var(--green)}.sync.ing{background:var(--orange)}.sync.err{background:var(--red)}
+.month-nav{display:flex;align-items:center;gap:2px}
+.mnav{width:30px;height:30px;border:none;background:none;font-size:18px;color:var(--text2);cursor:pointer;border-radius:8px;display:flex;align-items:center;justify-content:center}
+.mnav:active{background:var(--border)}
+.month-lbl{font-size:14px;font-weight:600;min-width:68px;text-align:center}
+#content{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px 8px}
+#tabbar{display:flex;background:var(--surface);border-top:0.5px solid var(--border);padding-bottom:var(--safe-bottom);flex-shrink:0;position:relative;z-index:10}
+.tb{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 5px;border:none;background:none;cursor:pointer;color:var(--text3);font-size:10px;font-weight:500}
+.tb svg{width:22px;height:22px;stroke-width:1.8}
+.tb.on{color:var(--accent)}
+.screen{display:none}.screen.on{display:block}
+.main-card{background:var(--accent);border-radius:20px;padding:22px 20px 20px;margin-bottom:16px;color:#fff}
+.mc-label{font-size:12px;font-weight:500;opacity:.7;margin-bottom:6px}
+.mc-amount{font-size:36px;font-weight:700;letter-spacing:-1.5px;margin-bottom:4px}
+.mc-sub{font-size:12px;opacity:.6;margin-bottom:18px}
+.mc-row{display:flex;gap:0;border-top:1px solid rgba(255,255,255,.2);padding-top:14px}
+.mc-stat{flex:1}
+.mc-stat-lbl{font-size:11px;opacity:.6;margin-bottom:3px}
+.mc-stat-val{font-size:15px;font-weight:700}
+.mc-div{width:1px;background:rgba(255,255,255,.2);margin:0 12px}
+.budget-bar-wrap{margin-top:14px}
+.budget-bar-outer{position:relative;margin-top:6px}
+.budget-bar-track{height:8px;background:rgba(255,255,255,.2);border-radius:4px;overflow:visible;position:relative}
+.budget-bar-fill{height:100%;border-radius:4px;transition:width .5s,background .5s}
+.budget-bar-marker{position:absolute;top:-3px;width:2px;height:14px;background:rgba(255,255,255,.9);border-radius:1px;transform:translateX(-50%)}
+.budget-bar-marker-lbl{position:absolute;top:16px;transform:translateX(-50%);font-size:9px;opacity:.8;white-space:nowrap}
+.budget-bar-labels{display:flex;justify-content:space-between;font-size:11px;opacity:.75;margin-top:20px}
+.budget-stage-badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;margin-bottom:6px}
+.mini-chart-wrap{background:var(--surface);border-radius:16px;padding:16px;margin-bottom:12px}
+.mini-chart-title{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px}
+.mini-chart{display:flex;align-items:flex-end;gap:4px;height:72px}
+.mini-bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+.mini-bar-amt{font-size:9px;font-weight:700;color:var(--text2);text-align:center;min-height:13px;line-height:13px}
+.mini-bar{width:100%;border-radius:3px 3px 0 0;min-height:2px;background:var(--accent);opacity:.6;transition:height .3s}
+.mini-bar.today{opacity:1}
+.mini-bar-lbl{font-size:9px;color:var(--text3)}
+.day-group{margin-bottom:4px}
+.day-header{display:flex;justify-content:space-between;padding:12px 4px 6px;font-size:12px;font-weight:700;color:var(--text2)}
+.elist{display:flex;flex-direction:column}
+.eitem{display:flex;align-items:center;gap:12px;background:var(--surface);padding:13px 14px;cursor:pointer}
+.eitem:first-child{border-radius:12px 12px 0 0}
+.eitem:last-child{border-radius:0 0 12px 12px}
+.eitem:only-child{border-radius:12px}
+.eitem:not(:last-child){border-bottom:0.5px solid var(--border)}
+.eitem:active{background:var(--surface2)}
+.eicon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.einfo{flex:1;min-width:0}
+.ename{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.emeta{font-size:12px;color:var(--text3);margin-top:1px}
+.eright{text-align:right}
+.eamt{font-size:15px;font-weight:700;letter-spacing:-.3px}
+.echev{font-size:13px;color:var(--text3);margin-top:1px}
+.empty{text-align:center;padding:48px 0;color:var(--text3)}
+.empty-ico{font-size:40px;margin-bottom:10px}
+.empty p{font-size:14px;line-height:1.6}
+.form-card{background:var(--surface);border-radius:16px;overflow:hidden;margin-bottom:10px}
+.form-sec-title{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.05em;padding:12px 16px 6px;text-transform:uppercase}
+.cat-row{display:flex;flex-wrap:wrap;gap:8px;padding:0 16px 14px}
+.cat-chip{border:1.5px solid var(--border);border-radius:50px;background:var(--surface2);padding:6px 14px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.cat-chip.sel{border-color:var(--accent);background:var(--accent-bg);color:var(--accent)}
+.cat-chip:active{transform:scale(.96)}
+.frow{display:flex;align-items:center;padding:0 16px;min-height:52px;border-top:.5px solid var(--border)}
+.flbl{font-size:14px;font-weight:600;width:52px;flex-shrink:0}
+.finput{flex:1;border:none;background:none;font-size:16px;color:var(--text);outline:none;text-align:right;font-family:inherit;padding:0}
+.finput::placeholder{color:var(--text3)}
+.reg-btn{width:100%;height:54px;border-radius:14px;border:none;background:var(--accent);color:#fff;font-size:17px;font-weight:700;cursor:pointer;margin-top:4px}
+.reg-btn:active{transform:scale(.98);opacity:.9}
+.reg-btn.edit{background:#1c1c1e}
+.cancel-btn{width:100%;height:48px;border-radius:14px;border:none;background:var(--surface);color:var(--text2);font-size:15px;font-weight:600;cursor:pointer;margin-top:8px;border:.5px solid var(--border)}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.sbox{background:var(--surface);border-radius:16px;padding:14px 16px}
+.sbox.wide{grid-column:1/-1}
+.sbox-lbl{font-size:11px;color:var(--text3);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:.03em}
+.sbox-val{font-size:22px;font-weight:700;letter-spacing:-.5px}
+.sbox-sub{font-size:12px;color:var(--text3);margin-top:2px}
+.bar-card{background:var(--surface);border-radius:16px;padding:16px;margin-bottom:10px}
+.bar-card-title{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.05em;text-transform:uppercase;margin-bottom:14px}
+.bar-rows{display:flex;flex-direction:column;gap:12px}
+.bar-row{display:flex;align-items:center;gap:10px}
+.bar-lbl{font-size:13px;color:var(--text2);width:50px;text-align:right;flex-shrink:0;font-weight:500}
+.bar-track{flex:1;height:8px;background:var(--bg);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;transition:width .4s}
+.bar-val{font-size:13px;font-weight:700;min-width:72px;text-align:right;flex-shrink:0}
+.budget-card{background:var(--surface);border-radius:16px;padding:16px;margin-bottom:10px}
+.budget-card-title{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.05em;text-transform:uppercase;margin-bottom:12px}
+.budget-input-row{display:flex;align-items:center;gap:8px}
+.budget-input{flex:1;height:44px;border:1px solid var(--border);border-radius:10px;padding:0 12px;font-size:16px;font-family:inherit;color:var(--text);background:var(--bg);outline:none}
+.budget-input:focus{border-color:var(--accent)}
+.budget-save-btn{height:44px;padding:0 18px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;opacity:0;transition:opacity .25s;pointer-events:none}
+.overlay.on{opacity:1;pointer-events:all}
+.sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:100%;max-width:430px;background:var(--surface);border-radius:22px 22px 0 0;z-index:101;transition:transform .3s cubic-bezier(.32,.72,0,1);padding-bottom:var(--safe-bottom)}
+.sheet.on{transform:translateX(-50%) translateY(0)}
+.sheet-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 0}
+.sbtn{height:50px;border-radius:12px;border:none;font-size:16px;font-weight:700;cursor:pointer;width:100%}
+.sbtn.primary{background:var(--accent);color:#fff}
+.sbtn.danger{background:#fff1f0;color:var(--red)}
+.sbtn.cancel{background:var(--surface2);color:var(--text2)}
+.sbtn:active{transform:scale(.98)}
+.toast{position:fixed;bottom:calc(68px + var(--safe-bottom) + 14px);left:50%;transform:translateX(-50%) translateY(6px);background:#1c1c1e;color:#fff;padding:11px 20px;border-radius:12px;font-size:14px;font-weight:600;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;white-space:nowrap;z-index:200}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(prefers-color-scheme:dark){
+  :root{--bg:#000;--surface:#1c1c1e;--surface2:#2c2c2e;--text:#fff;--text2:#aeaeb2;--text3:#636366;--border:#38383a;--accent-bg:#0a1d40}
+  .sbtn.danger{background:#2c1010;color:#ff6b60}
+  .sbtn.cancel{background:#2c2c2e;color:#aeaeb2}
+  .budget-input{background:#2c2c2e;border-color:#48484a}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="header">
+    <div class="hdr">
+      <div class="hdr-left">
+        <span class="hdr-title" id="hdr-title">가계부</span>
+        <span class="sync ing" id="sync"></span>
+      </div>
+      <div class="month-nav" id="month-nav">
+        <button class="mnav" onclick="chMonth(-1)">&#8249;</button>
+        <span class="month-lbl" id="month-lbl"></span>
+        <button class="mnav" onclick="chMonth(1)">&#8250;</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="content">
+    <!-- 홈 -->
+    <div id="s-home" class="screen on">
+      <div class="main-card">
+        <div class="mc-label">이번 달 총 지출</div>
+        <div class="mc-amount" id="mc-amount">&#8361;0</div>
+        <div class="mc-sub" id="mc-sub">지출 내역이 없어요</div>
+        <div id="budget-bar-wrap" style="display:none" class="budget-bar-wrap">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <span class="budget-stage-badge" id="bbar-badge"></span>
+            <span style="font-size:11px;opacity:.75" id="bbar-pct"></span>
+          </div>
+          <div class="budget-bar-outer">
+            <div class="budget-bar-track">
+              <div class="budget-bar-fill" id="bbar-fill" style="width:0%"></div>
+              <div class="budget-bar-marker" id="bbar-marker"><span class="budget-bar-marker-lbl" id="bbar-marker-lbl"></span></div>
+            </div>
+          </div>
+          <div class="budget-bar-labels"><span id="bbar-left"></span><span id="bbar-right"></span></div>
+        </div>
+        <div class="mc-row">
+          <div class="mc-stat"><div class="mc-stat-lbl">건수</div><div class="mc-stat-val" id="mc-cnt">0건</div></div>
+          <div class="mc-div"></div>
+          <div class="mc-stat"><div class="mc-stat-lbl">일 평균</div><div class="mc-stat-val" id="mc-avg">&#8361;0</div></div>
+          <div class="mc-div"></div>
+          <div class="mc-stat"><div class="mc-stat-lbl">최다 카테고리</div><div class="mc-stat-val" id="mc-top">-</div></div>
+        </div>
+      </div>
+      <div class="mini-chart-wrap">
+        <div class="mini-chart-title">주간 지출 추이</div>
+        <div class="mini-chart" id="mini-chart"></div>
+      </div>
+      <div id="home-list"></div>
+    </div>
+
+    <!-- 추가 -->
+    <div id="s-add" class="screen">
+      <div class="form-card">
+        <div class="form-sec-title">카테고리</div>
+        <div class="cat-row" id="cat-row"></div>
+      </div>
+      <div class="form-card">
+        <div class="frow" style="border-top:none">
+          <span class="flbl">금액</span>
+          <input class="finput" type="number" id="inp-amt" placeholder="&#8361; 0" inputmode="numeric" pattern="[0-9]*">
+        </div>
+        <div class="frow">
+          <span class="flbl">메모</span>
+          <input class="finput" type="text" id="inp-memo" placeholder="내용 입력">
+        </div>
+        <div class="frow">
+          <span class="flbl">날짜</span>
+          <input class="finput" type="date" id="inp-date">
+        </div>
+      </div>
+      <button class="reg-btn" id="reg-btn" onclick="submitExp()">지출 등록</button>
+      <button class="cancel-btn" id="cancel-btn" style="display:none" onclick="cancelEdit()">취소</button>
+    </div>
+
+    <!-- 통계 -->
+    <div id="s-stats" class="screen">
+      <div class="stat-grid">
+        <div class="sbox"><div class="sbox-lbl">총 지출</div><div class="sbox-val" id="st-total">&#8361;0</div></div>
+        <div class="sbox"><div class="sbox-lbl">일 평균</div><div class="sbox-val" id="st-avg">&#8361;0</div></div>
+        <div class="sbox"><div class="sbox-lbl">최다 지출</div><div class="sbox-val" id="st-top">-</div><div class="sbox-sub" id="st-top-amt"></div></div>
+        <div class="sbox"><div class="sbox-lbl">지출 건수</div><div class="sbox-val" id="st-cnt">0건</div></div>
+      </div>
+      <div class="bar-card">
+        <div class="bar-card-title">카테고리별 지출</div>
+        <div class="bar-rows" id="bar-rows"></div>
+      </div>
+      <div class="budget-card">
+        <div class="budget-card-title">월 예산 설정</div>
+        <div class="budget-input-row">
+          <input class="budget-input" type="number" id="budget-inp" placeholder="&#8361; 예산 입력" inputmode="numeric">
+          <button class="budget-save-btn" onclick="saveBudget()">저장</button>
+        </div>
+        <div id="budget-info" style="margin-top:10px;font-size:13px;color:var(--text2)"></div>
+      </div>
+      <div class="budget-card">
+        <div class="budget-card-title">카테고리 관리</div>
+        <div id="cat-manage-list" style="margin-bottom:12px"></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="new-cat-icon" type="text" maxlength="2" placeholder="😀"
+            style="width:52px;height:44px;border:1px solid var(--border);border-radius:10px;font-size:20px;text-align:center;background:var(--bg);color:var(--text);outline:none;font-family:inherit">
+          <input id="new-cat-name" type="text" placeholder="카테고리 이름"
+            style="flex:1;height:44px;border:1px solid var(--border);border-radius:10px;padding:0 12px;font-size:15px;background:var(--bg);color:var(--text);outline:none;font-family:inherit">
+          <button onclick="addCustomCat()"
+            style="height:44px;padding:0 16px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap">추가</button>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:8px">기본 카테고리는 삭제할 수 없어요</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tabbar">
+    <button class="tb on" id="tb-home" onclick="goTab('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>홈
+    </button>
+    <button class="tb" id="tb-add" onclick="goTab('add')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>추가
+    </button>
+    <button class="tb" id="tb-stats" onclick="goTab('stats')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="12" width="4" height="9" rx="1"/><rect x="10" y="7" width="4" height="14" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></svg>통계
+    </button>
+  </div>
+</div>
+
+<!-- 바텀시트: 탭하면 바로 수정 폼 -->
+<div class="overlay" id="overlay" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-handle"></div>
+  <div style="padding:14px 20px 6px;display:flex;align-items:center;justify-content:space-between">
+    <div style="font-size:17px;font-weight:700;letter-spacing:-.3px" id="sh-name"></div>
+    <button onclick="closeSheet()" style="background:none;border:none;font-size:14px;color:var(--text3);cursor:pointer;padding:4px 8px">닫기</button>
+  </div>
+  <div style="margin:0 16px 10px;background:var(--surface2);border-radius:14px;overflow:hidden">
+    <div style="padding:8px 16px 6px;font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.05em;text-transform:uppercase">카테고리</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;padding:0 16px 14px" id="sh-cat-row"></div>
+  </div>
+  <div style="margin:0 16px 10px;background:var(--surface2);border-radius:14px;overflow:hidden">
+    <div style="display:flex;align-items:center;padding:0 16px;min-height:52px;border-bottom:.5px solid var(--border)">
+      <span style="font-size:14px;font-weight:600;width:52px;flex-shrink:0">금액</span>
+      <input id="sh-amt-inp" type="number" inputmode="numeric" pattern="[0-9]*"
+        style="flex:1;border:none;background:none;font-size:16px;color:var(--text);outline:none;text-align:right;font-family:inherit" placeholder="0">
+    </div>
+    <div style="display:flex;align-items:center;padding:0 16px;min-height:52px;border-bottom:.5px solid var(--border)">
+      <span style="font-size:14px;font-weight:600;width:52px;flex-shrink:0">메모</span>
+      <input id="sh-memo-inp" type="text"
+        style="flex:1;border:none;background:none;font-size:16px;color:var(--text);outline:none;text-align:right;font-family:inherit" placeholder="내용 입력">
+    </div>
+    <div style="display:flex;align-items:center;padding:0 16px;min-height:52px">
+      <span style="font-size:14px;font-weight:600;width:52px;flex-shrink:0">날짜</span>
+      <input id="sh-date-inp" type="date"
+        style="flex:1;border:none;background:none;font-size:16px;color:var(--text);outline:none;text-align:right;font-family:inherit">
+    </div>
+  </div>
+  <div style="padding:4px 16px 12px;display:flex;flex-direction:column;gap:8px">
+    <button class="sbtn primary" onclick="saveEdit()">수정 완료</button>
+    <button class="sbtn danger" onclick="delFromSheet()">삭제하기</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey:"AIzaSyBhR0ukJt2OrynKKHI-OvOdRIkLfoFaT48",
+  authDomain:"expanse-tracker-bb1f3.firebaseapp.com",
+  databaseURL:"https://expanse-tracker-bb1f3-default-rtdb.firebaseio.com",
+  projectId:"expanse-tracker-bb1f3",
+  storageBucket:"expanse-tracker-bb1f3.firebasestorage.app",
+  messagingSenderId:"46693798290",
+  appId:"1:46693798290:web:0ee78dfa005a0edf55b14b"
+});
+var db = firebase.database();
+var expRef = db.ref('expenses');
+var budgetRef = db.ref('settings/budget');
+
+var DEFAULT_CATS = [
+  {id:'food',   label:'\uc2dd\ube44',  icon:String.fromCodePoint(0x1F35A), color:'#34c759', bg:'#edfaf2', custom:false},
+  {id:'cafe',   label:'\uce74\ud398',  icon:String.fromCodePoint(0x2615),  color:'#ff9500', bg:'#fff4e5', custom:false},
+  {id:'trans',  label:'\uad50\ud1b5',  icon:String.fromCodePoint(0x1F687), color:'#0064ff', bg:'#e8f0ff', custom:false},
+  {id:'shop',   label:'\uc1fc\ud551',  icon:String.fromCodePoint(0x1F6CD), color:'#bf5af2', bg:'#f5e8ff', custom:false},
+  {id:'health', label:'\uc758\ub8cc',  icon:String.fromCodePoint(0x1F48A), color:'#ff3b30', bg:'#ffe8e7', custom:false},
+  {id:'fun',    label:'\uc5ec\uac00',  icon:String.fromCodePoint(0x1F3AE), color:'#ff2d55', bg:'#ffe8ed', custom:false},
+  {id:'beauty', label:'\ubdf0\ud2f0',  icon:String.fromCodePoint(0x1F484), color:'#ff6b00', bg:'#fff0e5', custom:false},
+  {id:'etc',    label:'\uae30\ud0c0',  icon:String.fromCodePoint(0x1F4CC), color:'#8e8e93', bg:'#f0f0f2', custom:false}
+];
+
+var CUSTOM_COLORS = [
+  {color:'#007aff',bg:'#e5f0ff'},{color:'#5856d6',bg:'#eeecff'},
+  {color:'#ff2d55',bg:'#ffe8ed'},{color:'#ff9500',bg:'#fff4e5'},
+  {color:'#34c759',bg:'#edfaf2'},{color:'#00c7be',bg:'#e5fafa'},
+  {color:'#ff6b00',bg:'#fff0e5'},{color:'#8e8e93',bg:'#f0f0f2'}
+];
+
+function loadCats(){
+  var saved = localStorage.getItem('custom_cats');
+  var custom = saved ? JSON.parse(saved) : [];
+  return DEFAULT_CATS.concat(custom);
+}
+function getCustomCats(){
+  var saved = localStorage.getItem('custom_cats');
+  return saved ? JSON.parse(saved) : [];
+}
+function saveCustomCats(custom){ localStorage.setItem('custom_cats', JSON.stringify(custom)); }
+
+var CATS = loadCats();
+var expenses = [], selCat = 'food', editKey = null, sheetKey = null, sheetEditCat = 'food';
+var viewDate = new Date(); viewDate.setDate(1);
+var budget = 0;
+
+function W(n){ return '\u20a9'+Math.round(n).toLocaleString(); }
+function fmtM(d){ return d.getFullYear()+'.'+(d.getMonth()+1).toString().padStart(2,'0'); }
+function today(){
+  var d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function sameM(d1,d2){ return d1.getFullYear()===d2.getFullYear()&&d1.getMonth()===d2.getMonth(); }
+function vExp(){ return expenses.filter(function(e){ return sameM(new Date(e.date),viewDate); }); }
+function daysIn(d){ return new Date(d.getFullYear(),d.getMonth()+1,0).getDate(); }
+function catOf(id){ return CATS.find(function(c){ return c.id===id; })||CATS[CATS.length-1]; }
+function setSyncDot(s){ document.getElementById('sync').className='sync '+s; }
+
+function dateLabel(ds){
+  var t=today();
+  var yd=new Date(); yd.setDate(yd.getDate()-1);
+  var ys=yd.getFullYear()+'-'+String(yd.getMonth()+1).padStart(2,'0')+'-'+String(yd.getDate()).padStart(2,'0');
+  if(ds===t) return '\uc624\ub298';
+  if(ds===ys) return '\uc5b4\uc81c';
+  var d=new Date(ds);
+  return (d.getMonth()+1)+'\uc6d4 '+d.getDate()+'\uc77c';
+}
+
+function goTab(name){
+  ['home','add','stats'].forEach(function(t){
+    document.getElementById('s-'+t).classList.toggle('on', t===name);
+    document.getElementById('tb-'+t).classList.toggle('on', t===name);
+  });
+  var titles={home:'\uac00\uacc4\ubd80', add:editKey?'\uc9c0\ucd9c \uc218\uc815':'\uc9c0\ucd9c \ucd94\uac00', stats:'\ud1b5\uacc4'};
+  document.getElementById('hdr-title').textContent = titles[name];
+  document.getElementById('month-nav').style.display = name==='add'?'none':'flex';
+  document.getElementById('month-lbl').textContent = fmtM(viewDate);
+  if(name==='stats') renderStats();
+  if(name==='home') renderHome();
+}
+
+function chMonth(d){
+  viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth()+d, 1);
+  document.getElementById('month-lbl').textContent = fmtM(viewDate);
+  renderAll();
+}
+
+function buildCats(){
+  var g=document.getElementById('cat-row'); g.innerHTML='';
+  CATS.forEach(function(c){
+    var b=document.createElement('button');
+    b.className='cat-chip'+(c.id===selCat?' sel':'');
+    b.innerHTML=c.icon+' '+c.label;
+    b.onclick=function(){ selCat=c.id; buildCats(); };
+    g.appendChild(b);
+  });
+}
+
+function buildSheetCats(){
+  var g=document.getElementById('sh-cat-row'); g.innerHTML='';
+  CATS.forEach(function(c){
+    var b=document.createElement('button');
+    b.className='cat-chip'+(c.id===sheetEditCat?' sel':'');
+    b.innerHTML=c.icon+' '+c.label;
+    b.onclick=function(){ sheetEditCat=c.id; buildSheetCats(); };
+    g.appendChild(b);
+  });
+}
+
+function renderHome(){
+  document.getElementById('month-lbl').textContent = fmtM(viewDate);
+  var ve=vExp();
+  var total=ve.reduce(function(s,e){return s+e.amount;},0);
+  var days=daysIn(viewDate);
+  document.getElementById('mc-amount').textContent = W(total);
+  document.getElementById('mc-sub').textContent = ve.length>0 ? ve.length+'\uac74 \uc9c0\ucd9c' : '\uc9c0\ucd9c \ub0b4\uc5ed\uc774 \uc5c6\uc5b4\uc694';
+  document.getElementById('mc-cnt').textContent = ve.length+'\uac74';
+  var now=new Date();
+  var isCurrentMonth=sameM(viewDate,now);
+  var elapsedDays=isCurrentMonth?now.getDate():days;
+  document.getElementById('mc-avg').textContent = W(elapsedDays>0?total/elapsedDays:0);
+  var bycat={};
+  ve.forEach(function(e){ bycat[e.cat]=(bycat[e.cat]||0)+e.amount; });
+  var topEntry=Object.entries(bycat).sort(function(a,b){return b[1]-a[1];})[0];
+  document.getElementById('mc-top').textContent = topEntry ? catOf(topEntry[0]).icon : '-';
+  var bw=document.getElementById('budget-bar-wrap');
+  if(budget>0){
+    bw.style.display='block';
+    // 오늘 날짜 비율 (1일 기준)
+    var today_d=new Date();
+    var dayOfMonth=today_d.getDate();
+    var totalDays=new Date(today_d.getFullYear(),today_d.getMonth()+1,0).getDate();
+    var datePct=Math.round(dayOfMonth/totalDays*100);
+    // 지출 비율
+    var spendPct=Math.round(total/budget*100);
+    var diff=spendPct-datePct;
+    // 4단계 판정
+    var stage, stageColor, stageBg, stageLabel;
+    if(diff<=5){
+      stage='safe'; stageColor='#34c759'; stageBg='rgba(52,199,89,.25)'; stageLabel='안전';
+    } else if(diff<=15){
+      stage='warn'; stageColor='#ffd60a'; stageBg='rgba(255,214,10,.25)'; stageLabel='주의';
+    } else if(diff<=25){
+      stage='danger'; stageColor='#ff9500'; stageBg='rgba(255,149,0,.25)'; stageLabel='위험';
+    } else {
+      stage='critical'; stageColor='#ff3b30'; stageBg='rgba(255,59,48,.25)'; stageLabel='심각';
+    }
+    var fillPct=Math.min(spendPct,100);
+    document.getElementById('bbar-fill').style.width=fillPct+'%';
+    document.getElementById('bbar-fill').style.background=stageColor;
+    document.getElementById('bbar-fill').style.boxShadow='0 0 6px '+stageColor+'88';
+    // 배지
+    var badge=document.getElementById('bbar-badge');
+    badge.textContent=stageLabel;
+    badge.style.background=stageBg;
+    badge.style.color=stageColor;
+    // 날짜 마커
+    var marker=document.getElementById('bbar-marker');
+    marker.style.left=datePct+'%';
+    document.getElementById('bbar-marker-lbl').textContent='오늘 '+datePct+'%';
+    // 라벨
+    document.getElementById('bbar-pct').textContent='지출 '+spendPct+'% / 날짜 '+datePct+'%';
+    document.getElementById('bbar-left').textContent=total<=budget?'남은 예산 '+W(budget-total):'예산 초과 '+W(total-budget);
+    document.getElementById('bbar-right').textContent=W(budget);
+  } else { bw.style.display='none'; }
+  renderMiniChart(ve);
+  renderList(ve);
+}
+
+function renderMiniChart(ve){
+  var wrap=document.getElementById('mini-chart'); wrap.innerHTML='';
+  var days=[];
+  for(var i=6;i>=0;i--){
+    var d=new Date(); d.setDate(d.getDate()-i);
+    var ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    days.push(ds);
+  }
+  var dayTotals=days.map(function(ds){
+    return ve.filter(function(e){return e.date===ds;}).reduce(function(s,e){return s+e.amount;},0);
+  });
+  var maxV=Math.max.apply(null,dayTotals.concat([1]));
+  var todayStr=today();
+  days.forEach(function(ds,i){
+    var col=document.createElement('div'); col.className='mini-bar-col';
+    var amtLbl=document.createElement('div'); amtLbl.className='mini-bar-amt';
+    if(dayTotals[i]>0){
+      var v=dayTotals[i];
+      if(v>=100000000) amtLbl.textContent=Math.round(v/100000000)+'\uc5b5';
+      else if(v>=10000) amtLbl.textContent=Math.round(v/10000)+'\ub9cc';
+      else amtLbl.textContent=Math.round(v/1000)+'\ucc9c';
+    } else { amtLbl.textContent=''; }
+    var h=Math.max(Math.round(dayTotals[i]/maxV*44),2);
+    var bar=document.createElement('div');
+    bar.className='mini-bar'+(ds===todayStr?' today':'');
+    bar.style.height=h+'px';
+    var lbl=document.createElement('div'); lbl.className='mini-bar-lbl';
+    var dd=new Date(ds); lbl.textContent=(dd.getMonth()+1)+'/'+ dd.getDate();
+    col.appendChild(amtLbl); col.appendChild(bar); col.appendChild(lbl);
+    wrap.appendChild(col);
+  });
+}
+
+function renderList(ve){
+  var container=document.getElementById('home-list'); container.innerHTML='';
+  if(!ve.length){
+    container.innerHTML='<div class="empty"><div class="empty-ico">\ud83e\uddfe</div><p>\uc774\ubc88 \ub2ec \uc9c0\ucd9c\uc774 \uc5c6\uc5b4\uc694<br>+ \ubc84\ud2bc\uc73c\ub85c \ucd94\uac00\ud574\ubcf4\uc138\uc694</p></div>';
+    return;
+  }
+  var sorted=ve.slice().sort(function(a,b){return b.date.localeCompare(a.date);});
+  var groups={};
+  sorted.forEach(function(e){ if(!groups[e.date]) groups[e.date]=[]; groups[e.date].push(e); });
+  Object.keys(groups).sort(function(a,b){return b.localeCompare(a);}).forEach(function(ds){
+    var items=groups[ds];
+    var dayTotal=items.reduce(function(s,e){return s+e.amount;},0);
+    var gDiv=document.createElement('div'); gDiv.className='day-group';
+    var hDiv=document.createElement('div'); hDiv.className='day-header';
+    hDiv.innerHTML='<span>'+dateLabel(ds)+'</span><span>'+W(dayTotal)+'</span>';
+    var lDiv=document.createElement('div'); lDiv.className='elist';
+    items.forEach(function(e){
+      var cat=catOf(e.cat);
+      var el=document.createElement('div'); el.className='eitem';
+      el.onclick=function(){ openSheet(e.fbKey); };
+      el.innerHTML='<div class="eicon" style="background:'+cat.bg+'">'+cat.icon+'</div>'
+        +'<div class="einfo"><div class="ename">'+(e.memo||cat.label)+'</div>'
+        +'<div class="emeta">'+cat.label+'</div></div>'
+        +'<div class="eright"><div class="eamt">'+W(e.amount)+'</div><div class="echev">\u203a</div></div>';
+      lDiv.appendChild(el);
+    });
+    gDiv.appendChild(hDiv); gDiv.appendChild(lDiv);
+    container.appendChild(gDiv);
+  });
+}
+
+function renderStats(){
+  document.getElementById('month-lbl').textContent = fmtM(viewDate);
+  var ve=vExp();
+  var total=ve.reduce(function(s,e){return s+e.amount;},0);
+  var days=daysIn(viewDate);
+  document.getElementById('st-total').textContent=W(total);
+  var now2=new Date();
+  var isCurrentMonth2=sameM(viewDate,now2);
+  var elapsedDays2=isCurrentMonth2?now2.getDate():days;
+  document.getElementById('st-avg').textContent=W(elapsedDays2>0?total/elapsedDays2:0);
+  document.getElementById('st-cnt').textContent=ve.length+'\uac74';
+  var bycat={};
+  CATS.forEach(function(c){bycat[c.id]=0;});
+  ve.forEach(function(e){bycat[e.cat]=(bycat[e.cat]||0)+e.amount;});
+  var sorted=Object.entries(bycat).sort(function(a,b){return b[1]-a[1];});
+  var top=sorted[0];
+  if(top&&top[1]>0){
+    var tc=catOf(top[0]);
+    document.getElementById('st-top').textContent=tc.icon+' '+tc.label;
+    document.getElementById('st-top-amt').textContent=W(top[1]);
+  } else {
+    document.getElementById('st-top').textContent='-';
+    document.getElementById('st-top-amt').textContent='';
+  }
+  var br=document.getElementById('bar-rows'); br.innerHTML='';
+  var maxV=top?top[1]:1;
+  if(!total){
+    br.innerHTML='<div style="text-align:center;padding:20px 0;font-size:13px;color:var(--text3)">\ub370\uc774\ud130\uac00 \uc5c6\uc5b4\uc694</div>';
+  } else {
+    CATS.forEach(function(c){
+      if(!bycat[c.id])return;
+      var barPct=Math.round(bycat[c.id]/maxV*100);
+      var totalPct=Math.round(bycat[c.id]/total*100);
+      var row=document.createElement('div'); row.className='bar-row';
+      row.innerHTML='<span class="bar-lbl">'+c.icon+' '+c.label+'</span>'
+        +'<div class="bar-track"><div class="bar-fill" style="width:'+barPct+'%;background:'+c.color+'"></div></div>'
+        +'<div style="text-align:right;flex-shrink:0;min-width:90px">'
+        +'<div style="font-size:13px;font-weight:700">'+W(bycat[c.id])+'</div>'
+        +'<div style="font-size:11px;color:var(--text3);margin-top:1px">'+totalPct+'%</div>'
+        +'</div>';
+      br.appendChild(row);
+    });
+  }
+  if(budget>0){
+    document.getElementById('budget-inp').value=budget;
+    var pct2=Math.round(total/budget*100);
+    document.getElementById('budget-info').innerHTML=
+      '\uc124\uc815 \uc608\uc0b0 <b>'+W(budget)+'</b> \u00b7 \uc0ac\uc6a9 <b>'+pct2+'%</b> \u00b7 '
+      +(total<=budget?'\ub0a8\uc740 \uae08\uc561 <b>'+W(budget-total)+'</b>':'\ucd08\uacfc <b>'+W(total-budget)+'</b>');
+  }
+  renderCatManage();
+}
+
+function saveBudget(){
+  var v=parseInt(document.getElementById('budget-inp').value)||0;
+  budget=v;
+  setSyncDot('ing');
+  budgetRef.set(v)
+    .then(function(){
+      setSyncDot('ok');
+      renderAll(); goTab('home');
+      toast('\uc608\uc0b0\uc774 \uc800\uc7a5\ub410\uc5b4\uc694 \u2713');
+    })
+    .catch(function(){ toast('\uc800\uc7a5 \uc2e4\ud328 \u3160\u3160'); setSyncDot('err'); });
+}
+
+function addCustomCat(){
+  var icon=document.getElementById('new-cat-icon').value.trim();
+  var name=document.getElementById('new-cat-name').value.trim();
+  if(!icon){ toast('\uc774\ubaa8\uc9c0\ub97c \uc785\ub825\ud574 \uc8fc\uc138\uc694'); return; }
+  if(!name){ toast('\uce74\ud14c\uace0\ub9ac \uc774\ub984\uc744 \uc785\ub825\ud574 \uc8fc\uc138\uc694'); return; }
+  var custom=getCustomCats();
+  var id='custom_'+Date.now();
+  var colorSet=CUSTOM_COLORS[custom.length%CUSTOM_COLORS.length];
+  custom.push({id:id,label:name,icon:icon,color:colorSet.color,bg:colorSet.bg,custom:true});
+  saveCustomCats(custom);
+  CATS=loadCats();
+  document.getElementById('new-cat-icon').value='';
+  document.getElementById('new-cat-name').value='';
+  buildCats(); buildSheetCats(); renderCatManage();
+  toast(icon+' '+name+' \ucd94\uac00\ub410\uc5b4\uc694');
+}
+
+function deleteCustomCat(id){
+  var custom=getCustomCats().filter(function(c){return c.id!==id;});
+  saveCustomCats(custom);
+  CATS=loadCats();
+  if(selCat===id) selCat='food';
+  if(sheetEditCat===id) sheetEditCat='food';
+  buildCats(); buildSheetCats(); renderCatManage(); renderAll();
+  toast('\uce74\ud14c\uace0\ub9ac\ub97c \uc0ad\uc81c\ud588\uc5b4\uc694');
+}
+
+function renderCatManage(){
+  var list=document.getElementById('cat-manage-list'); if(!list) return;
+  var custom=getCustomCats();
+  if(!custom.length){
+    list.innerHTML='<div style="font-size:13px;color:var(--text3);padding:4px 0 8px">\ucee4\uc2a4\ud140 \uce74\ud14c\uace0\ub9ac\uac00 \uc5c6\uc5b4\uc694</div>';
+    return;
+  }
+  list.innerHTML='';
+  custom.forEach(function(cat){
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)';
+    row.innerHTML='<div style="width:36px;height:36px;border-radius:9px;background:'+cat.bg+';display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">'+cat.icon+'</div>'
+      +'<span style="flex:1;font-size:15px;font-weight:600">'+cat.label+'</span>'
+      +'<button onclick="deleteCustomCat(\''+cat.id+'\')" style="border:none;background:#fff2f0;color:var(--red);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer">\uc0ad\uc81c</button>';
+    list.appendChild(row);
+  });
+}
+
+function openSheet(fbKey){
+  var e=expenses.find(function(x){return x.fbKey===fbKey;}); if(!e) return;
+  var cat=catOf(e.cat);
+  sheetKey=fbKey; sheetEditCat=e.cat;
+  document.getElementById('sh-name').textContent=e.memo||cat.label;
+  document.getElementById('sh-amt-inp').value=e.amount;
+  document.getElementById('sh-memo-inp').value=e.memo||'';
+  document.getElementById('sh-date-inp').value=e.date;
+  buildSheetCats();
+  document.getElementById('overlay').classList.add('on');
+  document.getElementById('sheet').classList.add('on');
+}
+
+function closeSheet(){
+  document.getElementById('overlay').classList.remove('on');
+  document.getElementById('sheet').classList.remove('on');
+  sheetKey=null;
+}
+
+function saveEdit(){
+  var amt=parseFloat(document.getElementById('sh-amt-inp').value);
+  if(!amt||amt<=0){ toast('\uae08\uc561\uc744 \uc785\ub825\ud574 \uc8fc\uc138\uc694'); return; }
+  var memo=document.getElementById('sh-memo-inp').value.trim();
+  var date=document.getElementById('sh-date-inp').value;
+  if(!date){ toast('\ub0a0\uc9dc\ub97c \uc120\ud0dd\ud574 \uc8fc\uc138\uc694'); return; }
+  setSyncDot('ing');
+  db.ref('expenses/'+sheetKey).update({cat:sheetEditCat,amount:amt,memo:memo,date:date})
+    .then(function(){
+      toast('\uc218\uc815\ub410\uc5b4\uc694 \u2713'); setSyncDot('ok');
+      viewDate=new Date(date); viewDate.setDate(1);
+      closeSheet();
+    }).catch(function(){ toast('\uc800\uc7a5 \uc2e4\ud328 \u3160\u3160'); setSyncDot('err'); });
+}
+
+function delFromSheet(){
+  if(!sheetKey) return;
+  var key=sheetKey; closeSheet(); setSyncDot('ing');
+  db.ref('expenses/'+key).remove()
+    .then(function(){ toast('\uc0ad\uc81c\ub410\uc5b4\uc694'); setSyncDot('ok'); })
+    .catch(function(){ toast('\uc0ad\uc81c \uc2e4\ud328'); setSyncDot('err'); });
+}
+
+function cancelEdit(){
+  editKey=null; selCat='food';
+  document.getElementById('inp-amt').value='';
+  document.getElementById('inp-memo').value='';
+  document.getElementById('inp-date').value=today();
+  document.getElementById('reg-btn').textContent='\uc9c0\ucd9c \ub4f1\ub85d';
+  document.getElementById('reg-btn').classList.remove('edit');
+  document.getElementById('cancel-btn').style.display='none';
+  buildCats();
+}
+
+function submitExp(){
+  var amt=parseFloat(document.getElementById('inp-amt').value);
+  if(!amt||amt<=0){ toast('\uae08\uc561\uc744 \uc785\ub825\ud574 \uc8fc\uc138\uc694'); return; }
+  var memo=document.getElementById('inp-memo').value.trim();
+  var date=document.getElementById('inp-date').value;
+  if(!date){ toast('\ub0a0\uc9dc\ub97c \uc120\ud0dd\ud574 \uc8fc\uc138\uc694'); return; }
+  setSyncDot('ing');
+  if(editKey){
+    db.ref('expenses/'+editKey).update({cat:selCat,amount:amt,memo:memo,date:date})
+      .then(function(){
+        toast('\uc218\uc815\ub410\uc5b4\uc694 \u2713'); setSyncDot('ok');
+        viewDate=new Date(date); viewDate.setDate(1);
+        cancelEdit(); goTab('home');
+      }).catch(function(){ toast('\uc800\uc7a5 \uc2e4\ud328 \u3160\u3160'); setSyncDot('err'); });
+  } else {
+    expRef.push({cat:selCat,amount:amt,memo:memo,date:date})
+      .then(function(){
+        toast('\ub4f1\ub85d\ub410\uc5b4\uc694 \u2713'); setSyncDot('ok');
+        document.getElementById('inp-amt').value='';
+        document.getElementById('inp-memo').value='';
+        document.getElementById('inp-date').value=today();
+        viewDate=new Date(date); viewDate.setDate(1);
+        goTab('home');
+      }).catch(function(){ toast('\uc800\uc7a5 \uc2e4\ud328 \u3160\u3160'); setSyncDot('err'); });
+  }
+}
+
+function toast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('on');
+  setTimeout(function(){ t.classList.remove('on'); },2200);
+}
+
+function renderAll(){ renderHome(); renderStats(); }
+
+setSyncDot('ing');
+
+// 예산 실시간 동기화
+budgetRef.on('value', function(snap){
+  budget = snap.val() || 0;
+  if(budget>0) document.getElementById('budget-inp').value=budget;
+  renderAll();
+});
+
+// 지출 실시간 동기화
+expRef.on('value',function(snap){
+  expenses=[];
+  var data=snap.val();
+  if(data){
+    Object.keys(data).forEach(function(k){
+      expenses.push(Object.assign({},data[k],{fbKey:k}));
+    });
+  }
+  setSyncDot('ok');
+  renderAll();
+});
+
+buildCats();
+document.getElementById('inp-date').value=today();
+document.getElementById('month-lbl').textContent=fmtM(viewDate);
+</script>
+</body>
+</html>
